@@ -24,20 +24,27 @@ function rin() {
     ip netns exec ${C_NAME} "$@"
 }
 
+docker kill ${C_NAME}-dnsmasq || true
+docker kill ${C_NAME}-squid || true
+echo "Sleeping 5s"
+sleep 5
 docker kill $C_NAME || true
 
 # start container
+#    --network none \
 docker run -d --rm \
-    --network none \
     --name ${C_NAME} \
     --dns 127.0.0.1 \
     --dns-search demo.iot \
     --hostname ${C_NAME} \
+    -p 127.0.0.1:3130:3128 \
+    -p 127.0.0.1:2222:2222 \
     $C_IMAGE sleep infinity
 
 brctl addbr $BR_NAME || true
 ip li set dev $BR_NAME up
 
+ip link del $NIC_H || true
 ip link add $NIC_H type veth peer name $NIC_C || true
 ip link set $NIC_H up
 brctl addif $BR_NAME $NIC_H || true
